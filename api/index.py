@@ -2,6 +2,7 @@ from http.server import BaseHTTPRequestHandler
 import json
 import urllib.parse
 
+# नेक्सस स्टाइल गेमिंग लॉगिन इंटरफेस (HTML + CSS)
 HTML_INTERFACE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -100,38 +101,40 @@ function processNexusAuth() {
 
 class handler(BaseHTTPRequestHandler):
     
-    def end_headers(self):
+    def do_OPTIONS(self):
+        self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
-        super().end_headers()
-
-    def do_OPTIONS(self):
-        self.send_response(200)
         self.end_headers()
 
     def do_GET(self):
         parsed_url = urllib.parse.urlparse(self.path)
         
+        # इन-गेम WebView लॉगिन इंटरफ़ेस लोड करना
         if "/oauth/login" in parsed_url.path or "/app/info/get" in parsed_url.path:
+            response_bytes = HTML_INTERFACE.encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(response_bytes)))
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(HTML_INTERFACE.encode('utf-8'))
+            self.wfile.write(response_bytes)
             return
             
+        # होमपेज रूट
+        response_bytes = b"Nexus Vercel Gateway: Online"
         self.send_response(200)
         self.send_header('Content-Type', 'text/plain; charset=utf-8')
+        self.send_header('Content-Length', str(len(response_bytes)))
+        self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
-        self.wfile.write(b"Nexus Vercel Gateway: Online")
+        self.wfile.write(response_bytes)
 
     def do_POST(self):
         parsed_url = urllib.parse.urlparse(self.path)
 
-        self.send_response(200)
-        self.send_header('Content-Type', 'application/json; charset=utf-8')
-        self.end_headers()
-
+        # गेस्ट टोकन का बिल्कुल सटीक स्ट्रक्चर
         if "token" in parsed_url.path or "grant" in parsed_url.path:
             nexus_token = {
                 "access_token": "nexus_live_auth_token_998877",
@@ -139,6 +142,14 @@ class handler(BaseHTTPRequestHandler):
                 "refresh_token": "nexus_refresh_token_998877",
                 "open_id": "10007788"
             }
-            self.wfile.write(json.dumps(nexus_token).encode('utf-8'))
+            response_bytes = json.dumps(nexus_token).encode('utf-8')
         else:
-            self.wfile.write(b'{}')
+            response_bytes = b'{}'
+
+        # यूनिटी नेटवर्क एरर को रोकने के लिए आवश्यक हेडर सेटिंग्स
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(response_bytes)))
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(response_bytes)
